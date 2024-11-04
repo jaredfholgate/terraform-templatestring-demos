@@ -44,14 +44,26 @@ variable "total_numbers_to_create" {
 }
 
 locals {
-  numbers      = range(var.seed_number, var.seed_number + var.total_numbers_to_create)
-  number_map   = { for number in local.numbers : "number_${format("%02d", number)}" => format("%0${var.number_padding}d", number) }
+  # Create a map of numbers to be used in the replacements.
+  numbers    = range(var.seed_number, var.seed_number + var.total_numbers_to_create)
+  number_map = { for number in local.numbers : "number_${format("%02d", number)}" => format("%0${var.number_padding}d", number) }
+}
+
+locals {
+  # Rename the environments map key to match the format of the resource_group_names map.
   environments = { for env, env_name in var.environments : "environment_${env}" => env_name }
+}
+
+locals {
+  # Form the final replacements map.
   replacements = merge(local.number_map, local.environments, {
     service  = var.service_name,
     location = var.location,
   })
+}
 
+locals {
+  # Create the final resource group names using the templatestring function
   resource_group_names = { for key, value in var.resource_group_names : key => templatestring(value, local.replacements) }
 }
 
